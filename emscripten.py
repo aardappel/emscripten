@@ -15,6 +15,7 @@ import subprocess
 import time
 import logging
 import pprint
+import shutil
 from collections import OrderedDict
 
 from tools import building
@@ -299,13 +300,20 @@ def create_named_globals(metadata):
   return '\n'.join(named_globals)
 
 
-def emscript(infile, outfile_js, memfile, temp_files, DEBUG):
+def emscript(in_wasm, out_wasm, outfile_js, memfile, temp_files, DEBUG):
   # Overview:
   #   * Run wasm-emscripten-finalize to extract metadata and modify the binary
   #     to use emscripten's wasm<->JS ABI
   #   * Use the metadata to generate the JS glue that goes with the wasm
 
-  metadata = finalize_wasm(infile, memfile, DEBUG)
+  if shared.Settings.SINGLE_FILE:
+    # placeholder strings for JS glue, to be replaced with subresource locations in do_binaryen
+    shared.Settings.WASM_BINARY_FILE = '<<< WASM_BINARY_FILE >>>'
+  else:
+    # set file locations, so that JS glue can find what it needs
+    shared.Settings.WASM_BINARY_FILE = shared.JS.escape_for_js_string(os.path.basename(out_wasm))
+
+  metadata = finalize_wasm(in_wasm, out_wasm, memfile, DEBUG)
 
   update_settings_glue(metadata, DEBUG)
 
@@ -344,7 +352,7 @@ def emscript(infile, outfile_js, memfile, temp_files, DEBUG):
     pre += '\n' + global_initializers + '\n'
 
   if shared.Settings.RELOCATABLE:
-    static_bump = align_memory(webassembly.parse_dylink_section(infile)[0])
+    static_bump = align_memory(webassembly.parse_dylink_section(in_wasm)[0])
     memory = Memory(static_bump)
     logger.debug('stack_base: %d, stack_max: %d, dynamic_base: %d', memory.stack_base, memory.stack_max, memory.dynamic_base)
 
@@ -407,7 +415,7 @@ def remove_trailing_zeros(memfile):
     f.write(mem_data[:end])
 
 
-def finalize_wasm(infile, memfile, DEBUG):
+def finalize_wasm(infile, outfile, memfile, DEBUG):
   building.save_intermediate(infile, 'base.wasm')
   args = ['--detect-features', '--minimize-wasm-changes']
 
@@ -478,11 +486,13 @@ def finalize_wasm(infile, memfile, DEBUG):
     args.append('--dwarf')
   stdout = building.run_binaryen_command('wasm-emscripten-finalize',
                                          infile=infile,
-                                         outfile=infile if modify_wasm else None,
+                                         outfile=outfile if modify_wasm else None,
                                          args=args,
                                          stdout=subprocess.PIPE)
   if modify_wasm:
     building.save_intermediate(infile, 'post_finalize.wasm')
+  elif infile != outfile:
+    shutil.copy(infile, outfile)
   if shared.Settings.GENERATE_SOURCE_MAP:
     building.save_intermediate(infile + '.map', 'post_finalize.map')
 
@@ -888,11 +898,11 @@ def generate_struct_info():
   shared.Settings.STRUCT_INFO = shared.Cache.get(generated_struct_info_name, generate_struct_info)
 
 
-def run(infile, outfile_js, memfile):
+def run(in_wasm, out_wasm, outfile_js, memfile):
   temp_files = shared.configuration.get_temp_files()
   if not shared.Settings.BOOTSTRAPPING_STRUCT_INFO:
     generate_struct_info()
 
   return temp_files.run_and_clean(lambda: emscript(
-      infile, outfile_js, memfile, temp_files, shared.DEBUG)
+      in_wasm, out_wasm, outfile_js, memfile, temp_files, shared.DEBUG)
   )

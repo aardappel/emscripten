@@ -589,12 +589,18 @@ class RunnerCore(unittest.TestCase, metaclass=RunnerMeta):
 
     dirname, basename = os.path.split(filename)
     output = shared.unsuffixed(basename) + suffix
-    cmd = compiler + [filename, '-o', output] + self.get_emcc_args(main_file=True) + \
-        ['-I.', '-I' + dirname, '-I' + os.path.join(dirname, 'include')] + \
+    cmd = compiler + self.get_emcc_args(main_file=True) + \
+        [filename, '-I.', '-I' + dirname, '-I' + os.path.join(dirname, 'include')] + \
         ['-I' + include for include in includes] + \
         libraries
-
-    self.run_process(cmd, stderr=self.stderr_redirect if not DEBUG else None)
+    if True:
+      cmd += ['-o', 'bare.wasm', '--oformat=bare']
+      self.run_process(cmd, stderr=self.stderr_redirect if not DEBUG else None)
+      cmd2 = compiler + self.get_emcc_args(main_file=True) + ['--post-link', 'bare.wasm', '-o', output]
+      self.run_process(cmd2, stderr=self.stderr_redirect if not DEBUG else None)
+    else:
+      cmd += ['-o', output]
+      self.run_process(cmd, stderr=self.stderr_redirect if not DEBUG else None)
     self.assertExists(output)
     if js_outfile and not self.uses_es6:
       self.verify_es5(output)
