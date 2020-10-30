@@ -1465,10 +1465,10 @@ def map_to_js_libs(library_name):
   return None
 
 
-def emit_wasm_source_map(wasm_file, map_file):
+def emit_wasm_source_map(wasm_file, map_file, final_wasm):
   # source file paths must be relative to the location of the map (which is
   # emitted alongside the wasm)
-  base_path = os.path.dirname(os.path.abspath(Settings.WASM_BINARY_FILE))
+  base_path = os.path.dirname(os.path.abspath(final_wasm))
   sourcemap_cmd = [PYTHON, path_from_root('tools', 'wasm-sourcemap.py'),
                    wasm_file,
                    '--dwarfdump=' + LLVM_DWARFDUMP,
