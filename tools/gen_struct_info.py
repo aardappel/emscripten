@@ -257,6 +257,7 @@ def inspect_headers(headers, cflags):
                                   '-Wno-format',
                                   '-nostdlib',
                                   compiler_rt,
+                                  '-s', 'MEMORY64=' + str(shared.Settings.MEMORY64),
                                   '-s', 'BOOTSTRAPPING_STRUCT_INFO=1',
                                   '-s', 'STRICT',
                                   # Use SINGLE_FILE=1 so there is only a single

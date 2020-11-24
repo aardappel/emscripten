@@ -531,6 +531,7 @@ LibraryManager.library = {
 
   time__sig: 'ii',
   time: function(ptr) {
+    {{{ from64('ptr') }}};
     var ret = (Date.now()/1000)|0;
     if (ptr) {
       {{{ makeSetValue('ptr', 0, 'ret', 'i32') }}};
@@ -730,7 +731,7 @@ LibraryManager.library = {
     var summerOffset = summer.getTimezoneOffset();
 
     // Local standard timezone offset. Local standard time is not adjusted for daylight savings.
-    // This code uses the fact that getTimezoneOffset returns a greater value during Standard Time versus Daylight Saving Time (DST). 
+    // This code uses the fact that getTimezoneOffset returns a greater value during Standard Time versus Daylight Saving Time (DST).
     // Thus it determines the expected output during Standard Time, and it compares whether the output of the given date the same (Standard) or less (DST).
     var stdTimezoneOffset = Math.max(winterOffset, summerOffset);
 
@@ -3228,6 +3229,7 @@ LibraryManager.library = {
   $readAsmConstArgsArray: '=[]',
   $readAsmConstArgs__deps: ['$readAsmConstArgsArray'],
   $readAsmConstArgs: function(sigPtr, buf) {
+    {{{ from64(['sigPtr', 'buf']) }}};
 #if ASSERTIONS
     // Nobody should have mutated _readAsmConstArgsArray underneath us to be something else than an array.
     assert(Array.isArray(readAsmConstArgsArray));
@@ -3676,6 +3678,9 @@ LibraryManager.library = {
   __memory_base: '{{{ GLOBAL_BASE }}}',
   // the wasm backend reserves slot 0 for the NULL function pointer
   __table_base: 1,
+#if MEMORY64
+  __table_base32: 1,
+#endif
   // To support such allocations during startup, track them on __heap_base and
   // then when the main module is loaded it reads that value and uses it to
   // initialize sbrk (the main module is relocatable itself, and so it does not

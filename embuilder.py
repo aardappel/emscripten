@@ -124,6 +124,8 @@ def main():
                       help='build relocatable objects for suitable for dynamic linking')
   parser.add_argument('--force', action='store_true',
                       help='force rebuild of target (by removing it first)')
+  parser.add_argument('--wasm64', action='store_true',
+                      help='use wasm64 architecture')
   parser.add_argument('operation', help='currently only "build" is supported')
   parser.add_argument('targets', nargs='+', help='see below')
   args = parser.parse_args()
@@ -143,6 +145,9 @@ def main():
 
   if args.pic:
     shared.Settings.RELOCATABLE = 1
+
+  if args.wasm64:
+    shared.Settings.MEMORY64 = 2
 
   if args.force:
     force = True

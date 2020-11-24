@@ -266,7 +266,10 @@ var HEAP_DATA_VIEW;
 #endif
 
 #if WASM_BIGINT
-var HEAP64;
+/** @type {BigInt64Array} */
+var HEAP64,
+/** @type {BigUint64Array} */
+    HEAPU64;
 #endif
 
 #if USE_PTHREADS
@@ -292,6 +295,7 @@ function updateGlobalBufferAndViews(buf) {
   Module['HEAPF64'] = HEAPF64 = new Float64Array(buf);
 #if WASM_BIGINT
   Module['HEAP64'] = HEAP64 = new BigInt64Array(buf);
+  Module['HEAPU64'] = HEAPU64 = new BigUint64Array(buf);
 #endif
 }
 
@@ -741,6 +745,50 @@ function instrumentWasmTableWithAbort() {
 }
 #endif
 
+#if MEMORY64
+// In memory64 mode wasm pointers are 64-bit. To support that in JS we must use
+// BigInts. For now we keep JS as much the same as it always was, that is,
+// stackAlloc() receives and returns a Number from the JS point of view -
+// we translate BigInts automatically for that.
+function instrumentWasmExportsForMemory64(exports) {
+  var instExports = {};
+  for (var name in exports) {
+    (function(name) {
+      var original = exports[name];
+      var replacement = original;
+      if (name === 'stackAlloc' || name === 'malloc') {
+        // get one i64, return an i64
+        replacement = function(x) {
+          var r = Number(original(BigInt(x)));
+          return r;
+        };
+      } else if (name === 'free') {
+        // get one i64
+        replacement = function(x) {
+          original(BigInt(x));
+        };
+      } else if (name === 'emscripten_stack_get_end' ||
+                 name === 'emscripten_stack_get_base' ||
+                 name === 'emscripten_stack_get_current') {
+        // return an i64
+        replacement = function() {
+          var r = Number(original());
+          return r;
+        };
+      } else if (name === 'main') {
+        // get a i64 as second arg
+        replacement = function(x, y) {
+          var r = original(x, BigInt(y));
+          return r;
+        };
+      }
+      instExports[name] = replacement;
+    })(name);
+  }
+  return instExports;
+}
+#endif MEMORY64
+
 var wasmBinaryFile = '{{{ WASM_BINARY_FILE }}}';
 if (!isDataURI(wasmBinaryFile)) {
   wasmBinaryFile = locateFile(wasmBinaryFile);
@@ -804,7 +852,7 @@ function getBinaryPromise() {
     }
 #endif
   }
-    
+
   // Otherwise, getBinary should be able to get it synchronously
   return Promise.resolve().then(function() { return getBinary(wasmBinaryFile); });
 }
@@ -931,6 +979,10 @@ function createWasm() {
 
 #if RELOCATABLE
     exports = relocateExports(exports, {{{ GLOBAL_BASE }}});
+#endif
+
+#if MEMORY64
+    exports = instrumentWasmExportsForMemory64(exports);
 #endif
 
 #if ASYNCIFY

@@ -13,13 +13,13 @@ var LibraryExceptions = {
   $ExceptionInfoAttrs: {
     // ExceptionInfo native structure layout.
     DESTRUCTOR_OFFSET: 0,
-    REFCOUNT_OFFSET: Runtime.POINTER_SIZE,
-    TYPE_OFFSET: Runtime.POINTER_SIZE + 4,
-    CAUGHT_OFFSET: Runtime.POINTER_SIZE + 8,
-    RETHROWN_OFFSET: Runtime.POINTER_SIZE + 9,
+    REFCOUNT_OFFSET: {{{ `${POINTER_SIZE}` }}},
+    TYPE_OFFSET: {{{ `${POINTER_SIZE}` }}} + 4,
+    CAUGHT_OFFSET: {{{ `${POINTER_SIZE}` }}} + 8,
+    RETHROWN_OFFSET: {{{ `${POINTER_SIZE}` }}} + 9,
 
     // Total structure size with padding, should be multiple of allocation alignment.
-    SIZE: alignMemory(Runtime.POINTER_SIZE + 10)
+    SIZE: alignMemory({{{ `${POINTER_SIZE}` }}} + 10)
   },
 
   $ExceptionInfo__deps: ['$ExceptionInfoAttrs'],
@@ -134,12 +134,12 @@ var LibraryExceptions = {
     };
 
     this.set_adjusted_ptr = function(adjustedPtr) {
-      var ptrSize = {{{ Runtime.POINTER_SIZE }}};
+      var ptrSize = {{{ `${POINTER_SIZE}` }}};
       {{{ makeSetValue('this.ptr', 'ptrSize', 'adjustedPtr', '*') }}};
     };
 
     this.get_adjusted_ptr = function() {
-      var ptrSize = {{{ Runtime.POINTER_SIZE }}};
+      var ptrSize = {{{ `${POINTER_SIZE}` }}};
       return {{{ makeGetValue('this.ptr', 'ptrSize', '*') }}};
     };
 
@@ -166,7 +166,7 @@ var LibraryExceptions = {
     };
 
     if (ptr === undefined) {
-      this.ptr = _malloc({{{ Runtime.POINTER_SIZE * 2 }}});
+      this.ptr = _malloc({{{ `${POINTER_SIZE}` * 2 }}});
       this.set_adjusted_ptr(0);
     } else {
       this.ptr = ptr;

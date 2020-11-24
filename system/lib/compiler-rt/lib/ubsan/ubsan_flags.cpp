@@ -79,7 +79,7 @@ void InitializeFlags() {
   parser.ParseString(MaybeCallUbsanDefaultOptions());
 
   // Override from environment variable.
-#if SANITIZER_EMSCRIPTEN
+#if SANITIZER_EMSCRIPTEN && !MEMORY64/*FIXME*/
   char *options = (char*) EM_ASM_INT({
     return withBuiltinMalloc(function () {
       return allocateUTF8(Module['UBSAN_OPTIONS'] || 0);
